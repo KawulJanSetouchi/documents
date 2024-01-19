@@ -1,0 +1,122 @@
+first:
+###shapefile smoothing algorism in python 
+
+import geopandas as gpd
+
+d = gpd.read_file('poly.shp')
+x = d.buffer(0.0001)
+
+tolerance = 0.00005
+simplified = x.simplify(tolerance, preserve_topology=True)
+simplified.to_file('simplified.shp')
+
+***************************
+import geopandas as gpd
+import shapely.ops as ops
+
+# ポリゴンのリストを作成します。
+polygons = gpd.read_file("polygons.shp")
+
+# 各ポリゴンのシェープを取得します。
+polygon_shapes = polygons["geometry"]
+
+# 各ポリゴンのシェープをスムーズします。
+smoothed_polygons = []
+for polygon_shape in polygon_shapes:
+    smoothed_polygon = ops.smooth(polygon_shape, radius=0.01)
+    smoothed_polygons.append(smoothed_polygon)
+
+# スムーズされたポリゴンのリストを作成します。
+smoothed_polygons = gpd.GeoDataFrame(smoothed_polygons, columns=["geometry"])
+
+******************************
+
+
+second:
+###shapefile dissolve  algorism in python 
+
+import geopandas as gpd
+
+# Load shapefile
+data = gpd.read_file("data.shp")
+
+# Dissolve based on "ID" attribute
+dissolved = data.dissolve(by="ID")
+
+# Save dissolved data
+dissolved.to_file("dissolved.shp")
+
+
+thrid:
+##shapefile dissolves nearest neighboring  algorism in python 
+
+import geopandas as gpd
+
+# Define distance threshold and attribute
+distance_threshold = 0.001
+attr_name = "ID"
+
+# Load shapefile
+data = gpd.read_file("data.shp")
+
+def nearest_neighbors(row, data):
+    neighbors = []
+    for other_index, other_row in data.iterrows():
+        if other_index != row.index and row[attr_name] == other_row[attr_name] and row.geometry.distance(other_row.geometry) <= distance_threshold:
+            neighbors.append(other_index)
+    return neighbors
+
+# Identify nearest neighbors for each feature
+data["neighbors"] = data.apply(nearest_neighbors, args=(data,), axis=1)
+
+# Dissolve features based on connected components
+dissolved = data.dissolve(by="neighbors", aggfunc={"ID": "first"})
+
+# Save dissolved data
+dissolved.to_file("dissolved_nn.shp")
+
+
+
+
+
+import geopandas as gpd
+
+# ポリゴンのリストを作成します。
+polygons = gpd.read_file("polygons.csv")
+
+# 各ポリゴンの名前とIDを取得します。
+polygon_names = polygons["name"]
+polygon_ids = polygons["id"]
+
+# 各ポリゴンについて、名前とIDが一致する最も近い隣接するポリゴンを検索します。
+for i in range(len(polygons)):
+    # 現在のポリゴンの名前とIDを取得します。
+    curr_name = polygon_names[i]
+    curr_id = polygon_ids[i]
+
+    # 現在のポリゴンと最も近い隣接するポリゴンを検索します。
+    closest_neighbor = polygons[polygons["name"] == curr_name]
+    closest_neighbor = closest_neighbor[closest_neighbor["id"] != curr_id]
+    closest_neighbor = closest_neighbor.iloc[0]
+
+    # 隣接するポリゴンが見つかった場合、両方のポリゴンを結合します。
+    if closest_neighbor is not None:
+        polygons = polygons.append(polygons.loc[i] | polygons.loc[closest_neighbor.index])
+        polygons = polygons.drop(i)
+        polygons = polygons.drop(closest_neighbor.index)
+
+# 結合されたポリゴンのリストを作成します。
+combined_polygons = polygons
+
+
+
+
+
+from arcpy import env
+env.workspace="‪C:\Users\kawuli\Desktop\Forest_Data\Forest_Data\pointdata.dbf "
+
+featureInput=r"pointdata"
+featureOutput=r"point_bbuffer"
+radius ="35 miles"
+arcpy.analysis.Buffer(featureInput, featureOutput, radius)
+
